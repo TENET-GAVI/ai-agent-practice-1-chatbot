@@ -1,0 +1,9 @@
+{
+  "name": "ai-agent-practice-1-chatbot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node smoke-test.mjs"
+  }
+}

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>暖心赞美鼓励机器人</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="chat-panel" aria-label="暖心赞美鼓励机器人">
+      <header class="chat-header">
+        <div>
+          <p class="eyebrow">AI智能体技术及其应用1</p>
+          <h1>暖心赞美鼓励机器人</h1>
+        </div>
+        <span class="status">可对话</span>
+      </header>
+
+      <div id="chatLog" class="chat-log" aria-live="polite"></div>
+
+      <form id="chatForm" class="composer">
+        <textarea id="userInput" name="message" rows="2" placeholder="输入一句话，和智能体对话" autocomplete="off"></textarea>
+        <button type="submit" aria-label="发送消息">发送</button>
+      </form>
+
+      <div class="quick-prompts" aria-label="快捷输入">
+        <button type="button" data-prompt="我最近坚持每天复习。">赞美</button>
+        <button type="button" data-prompt="我最近学智能体技术有点吃力，怕自己跟不上。">鼓励</button>
+        <button type="button" data-prompt="什么是智能体？">Search</button>
+      </div>
+    </section>
+
+    <aside class="info-panel">
+      <h2>智能体配置</h2>
+      <dl>
+        <div>
+          <dt>类型</dt>
+          <dd>基于提示词的智能体</dd>
+        </div>
+        <div>
+          <dt>角色</dt>
+          <dd>充满正能量的赞美鼓励机器人</dd>
+        </div>
+        <div>
+          <dt>资料</dt>
+          <dd>实践1提示词.txt</dd>
+        </div>
+      </dl>
+
+      <details>
+        <summary>完整提示词</summary>
+        <pre id="promptText"></pre>
+      </details>
+    </aside>
+  </main>
+
+  <script type="module" src="./agent.js"></script>
+</body>
+</html>
