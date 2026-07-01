@@ -29,9 +29,13 @@ file:///C:/Users/ASUS/Desktop/%E5%A4%9Aagent%E5%AE%9E%E8%B7%B5%E9%A1%B9%E7%9B%AE
 
 ## GitHub Pages 发布
 
-计划发布仓库：`ai-agent-practice-1-chatbot`。
+发布仓库：`https://github.com/TENET-GAVI/ai-agent-practice-1-chatbot`
 
-发布后可提交 GitHub Pages 链接作为智能体链接。
+GitHub Pages 链接：
+
+```text
+https://tenet-gavi.github.io/ai-agent-practice-1-chatbot/
+```
 
 ## 本地验证
 
@@ -48,5 +52,5 @@ npm test
 ## 示例回答
 
 ```text
-智能体链接：发布完成后填写 GitHub Pages 链接
+智能体链接：https://tenet-gavi.github.io/ai-agent-practice-1-chatbot/
 ```
