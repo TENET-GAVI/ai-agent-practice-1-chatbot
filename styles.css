@@ -25,6 +25,7 @@ body {
 }
 
 button,
+select,
 textarea {
   font: inherit;
 }
@@ -48,7 +49,7 @@ textarea {
 
 .chat-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   min-width: 0;
   overflow: hidden;
 }
@@ -98,6 +99,53 @@ h2 {
   color: #8a4b09;
   border-color: rgba(210, 132, 24, 0.34);
   background: #fff7e8;
+}
+
+.status.ready {
+  color: var(--accent-strong);
+  border-color: rgba(15, 118, 110, 0.28);
+  background: var(--agent);
+}
+
+.model-bar {
+  display: grid;
+  grid-template-columns: auto minmax(190px, 260px) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfb;
+}
+
+.model-bar label {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.model-bar select {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.model-bar button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+  color: #fff;
+  background: var(--accent);
+  font-weight: 700;
+}
+
+#loadProgress {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .chat-log {
@@ -182,6 +230,7 @@ textarea {
 }
 
 textarea:focus,
+select:focus,
 button:focus-visible,
 summary:focus-visible,
 .search-link:focus-visible {
@@ -209,7 +258,9 @@ summary:focus-visible,
 }
 
 .composer button:disabled,
-.composer button:disabled:hover {
+.composer button:disabled:hover,
+.model-bar button:disabled,
+.model-bar button:disabled:hover {
   cursor: wait;
   background: #7d918e;
 }
@@ -297,6 +348,7 @@ pre {
   }
 
   .chat-header,
+  .model-bar,
   .chat-log,
   .composer,
   .quick-prompts {
@@ -310,6 +362,11 @@ pre {
 
   .composer {
     grid-template-columns: 1fr;
+  }
+
+  .model-bar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .composer button {

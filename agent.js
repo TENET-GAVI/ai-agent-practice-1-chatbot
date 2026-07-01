@@ -1,3 +1,6 @@
+export const WEBLLM_CDN_URL = "https://esm.run/@mlc-ai/web-llm";
+export const DEFAULT_MODEL_ID = "Qwen2-1.5B-Instruct-q4f16_1-MLC";
+
 export const AGENT_PROMPT = `# 角色
 你是一个充满正能量的赞美鼓励机器人，时刻用温暖的话语给予人们赞美和鼓励，让他们充满自信与动力。
 
@@ -19,11 +22,11 @@ export const AGENT_PROMPT = `# 角色
 
 export const SYSTEM_PROMPT = `${AGENT_PROMPT}
 
-## 对话要求
-- 你必须根据上下文继续聊天，记住用户前面提到的事情，不要每轮都像第一次见面。
-- 用户追问“为什么、怎么做、继续、还有呢、具体点”时，要接着上一轮内容展开。
-- 回复要自然，像一个正在对话的智能体，而不是固定模板。
-- 如果用户问专业问题，可以先给简明解释，并建议继续使用 Search 核对资料。`;
+## 本地大模型对话要求
+- 你正在作为一个真正的聊天机器人运行，必须根据上下文继续对话。
+- 记住用户前面说过的学习内容、困难和情绪，追问时要接着上一轮回答展开。
+- 回复要自然、具体、有温度，不要机械套模板。
+- 用户问专业问题时，先给简明解释，再鼓励用户用 Search 核对资料。`;
 
 export const SMOKE_CASES = [
   {
@@ -56,6 +59,104 @@ const professionalPattern = /(什么是|如何|怎么|原理|代码|api|API|专�
 const difficultyPattern = /(难|困难|不会|焦虑|压力|害怕|担心|累|失败|跟不上|不懂|烦|崩溃|来不及|紧张|吃力)/;
 const positivePattern = /(坚持|完成|做了|学会|进步|努力|认真|复习|运动|帮助|尝试|自律|勇敢|负责|优秀|开心)/;
 const followUpPattern = /(为什么|怎么做|咋办|继续|还有|具体|下一步|然后|那我|这个|它|这些|再说|展开)/;
+
+let webllmModulePromise;
+let engine;
+let loadedModelId = "";
+
+export function isWebGPUSupported() {
+  return typeof navigator !== "undefined" && Boolean(navigator.gpu);
+}
+
+export async function loadLocalModel(modelId = DEFAULT_MODEL_ID, progressCallback = () => {}) {
+  if (!isWebGPUSupported()) {
+    throw new Error("当前浏览器不支持 WebGPU，无法运行浏览器本地大模型。请使用最新版 Chrome 或 Edge。");
+  }
+
+  if (engine && loadedModelId === modelId) {
+    return engine;
+  }
+
+  const webllm = await loadWebLLMModule();
+  progressCallback({ text: "开始加载本地大模型..." });
+  engine = await webllm.CreateMLCEngine(modelId, {
+    initProgressCallback: (progress) => {
+      progressCallback(progress);
+    }
+  });
+  loadedModelId = modelId;
+  return engine;
+}
+
+async function loadWebLLMModule() {
+  if (!webllmModulePromise) {
+    webllmModulePromise = import(WEBLLM_CDN_URL);
+  }
+
+  return webllmModulePromise;
+}
+
+export function buildMessages(rawInput, history = []) {
+  const recentHistory = history.slice(-10).map((item) => ({
+    role: item.role === "assistant" ? "assistant" : "user",
+    content: String(item.content || "")
+  }));
+
+  return [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...recentHistory,
+    { role: "user", content: String(rawInput || "").trim() }
+  ];
+}
+
+export async function createModelReply(rawInput, history = [], modelEngine = engine, onToken = () => {}) {
+  if (!modelEngine?.chat?.completions?.create) {
+    throw new Error("本地大模型还没有加载完成。");
+  }
+
+  const chunks = await modelEngine.chat.completions.create({
+    messages: buildMessages(rawInput, history),
+    temperature: 0.75,
+    top_p: 0.9,
+    max_tokens: 420,
+    stream: true
+  });
+
+  let text = "";
+  for await (const chunk of chunks) {
+    const delta = chunk.choices?.[0]?.delta?.content || "";
+    if (delta) {
+      text += delta;
+      onToken(text);
+    }
+  }
+
+  return {
+    text: text.trim(),
+    mode: "local-llm"
+  };
+}
+
+export async function createReply(rawInput, history = [], options = {}) {
+  const modelEngine = options.engine ?? engine;
+  const onToken = options.onToken ?? (() => {});
+  const useModel = options.useModel ?? true;
+
+  if (useModel && modelEngine) {
+    try {
+      return await createModelReply(rawInput, history, modelEngine, onToken);
+    } catch (error) {
+      const fallback = createLocalReply(rawInput, history);
+      return {
+        ...fallback,
+        mode: "fallback",
+        text: `${fallback.text}\n\n（本地大模型生成暂时失败，已使用上下文兜底回复。原因：${error.message}）`
+      };
+    }
+  }
+
+  return { ...createLocalReply(rawInput, history), mode: "fallback" };
+}
 
 export function createLocalReply(rawInput, history = []) {
   const input = String(rawInput || "").trim();
@@ -93,77 +194,8 @@ export function createLocalReply(rawInput, history = []) {
   }
 
   return {
-    text: `你愿意来表达自己的想法，这本身就说明你很真诚，也很重视自己的成长。我想更了解你一点：你觉得自己最近做过最值得肯定的一件事是什么呢？`
+    text: "你愿意来表达自己的想法，这本身就说明你很真诚，也很重视自己的成长。我想更了解你一点：你觉得自己最近做过最值得肯定的一件事是什么呢？"
   };
-}
-
-export async function createReply(rawInput, history = [], options = {}) {
-  const puterClient = options.puterClient ?? globalThis.puter;
-  const useAI = options.useAI ?? true;
-
-  if (!useAI || !puterClient?.ai?.chat) {
-    return { ...createLocalReply(rawInput, history), mode: "local" };
-  }
-
-  try {
-    const messages = buildMessages(rawInput, history);
-    const response = await puterClient.ai.chat(messages, {
-      model: "gpt-5-nano",
-      temperature: 0.7,
-      max_tokens: 420
-    });
-    const text = extractResponseText(response);
-
-    if (!text) {
-      throw new Error("empty AI response");
-    }
-
-    return { text, mode: "ai" };
-  } catch (error) {
-    const fallback = createLocalReply(rawInput, history);
-    return {
-      ...fallback,
-      mode: "fallback",
-      text: `${fallback.text}\n\n（AI 在线生成暂时不可用，已使用本地上下文模式继续对话。）`
-    };
-  }
-}
-
-export function buildMessages(rawInput, history = []) {
-  const recentHistory = history.slice(-10).map((item) => ({
-    role: item.role === "assistant" ? "assistant" : "user",
-    content: String(item.content || "")
-  }));
-
-  return [
-    { role: "system", content: SYSTEM_PROMPT },
-    ...recentHistory,
-    { role: "user", content: String(rawInput || "").trim() }
-  ];
-}
-
-function extractResponseText(response) {
-  if (typeof response === "string") {
-    return response.trim();
-  }
-
-  if (typeof response?.text === "string") {
-    return response.text.trim();
-  }
-
-  const content = response?.message?.content;
-  if (typeof content === "string") {
-    return content.trim();
-  }
-
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => part?.text || "")
-      .join("")
-      .trim();
-  }
-
-  return "";
 }
 
 function inferContextTopic(history) {
@@ -227,8 +259,51 @@ function setStatus(statusEl, mode) {
     return;
   }
 
-  statusEl.classList.toggle("fallback", mode !== "ai");
-  statusEl.textContent = mode === "ai" ? "AI 对话" : "本地兜底";
+  statusEl.classList.toggle("ready", mode === "ready" || mode === "local-llm");
+  statusEl.classList.toggle("fallback", mode !== "ready" && mode !== "local-llm");
+
+  const text = {
+    unloaded: "未加载模型",
+    loading: "加载中",
+    ready: "本地大模型",
+    "local-llm": "本地大模型",
+    fallback: "兜底回复"
+  };
+  statusEl.textContent = text[mode] || "未加载模型";
+}
+
+function setProgress(progressEl, progress) {
+  if (!progressEl) {
+    return;
+  }
+
+  if (typeof progress?.text === "string") {
+    progressEl.textContent = progress.text;
+    return;
+  }
+
+  if (typeof progress?.progress === "number") {
+    progressEl.textContent = `模型加载中：${Math.round(progress.progress * 100)}%`;
+  }
+}
+
+async function ensureModelLoaded({ modelSelect, loadButton, progressEl, statusEl }) {
+  setStatus(statusEl, "loading");
+  loadButton.disabled = true;
+  loadButton.textContent = "加载中";
+
+  try {
+    await loadLocalModel(modelSelect.value, (progress) => setProgress(progressEl, progress));
+    setStatus(statusEl, "ready");
+    progressEl.textContent = "本地大模型已加载，可以连续聊天。";
+    loadButton.textContent = "已加载";
+  } catch (error) {
+    setStatus(statusEl, "fallback");
+    progressEl.textContent = error.message;
+    loadButton.disabled = false;
+    loadButton.textContent = "重试加载";
+    throw error;
+  }
 }
 
 function initChat() {
@@ -239,9 +314,12 @@ function initChat() {
   const promptText = document.querySelector("#promptText");
   const quickButtons = document.querySelectorAll("[data-prompt]");
   const statusEl = document.querySelector("#modelStatus");
+  const modelSelect = document.querySelector("#modelSelect");
+  const loadButton = document.querySelector("#loadModelButton");
+  const progressEl = document.querySelector("#loadProgress");
   const conversation = [];
 
-  if (!log || !form || !input || !sendButton) {
+  if (!log || !form || !input || !sendButton || !modelSelect || !loadButton || !progressEl) {
     return;
   }
 
@@ -249,9 +327,26 @@ function initChat() {
     promptText.textContent = AGENT_PROMPT;
   }
 
-  const intro = "你好，我是暖心赞美鼓励机器人。我会记住我们前面的对话，继续围绕你的情况给你赞美、鼓励和建议。";
+  const intro = "你好，我是暖心赞美鼓励机器人。点击“加载本地大模型”后，我会在你的浏览器里用本地模型连续聊天。";
   conversation.push({ role: "assistant", content: intro });
   appendMessage(log, "agent", intro);
+
+  loadButton.addEventListener("click", async () => {
+    try {
+      await ensureModelLoaded({ modelSelect, loadButton, progressEl, statusEl });
+    } catch {
+      // The visible progress text already explains the failure.
+    }
+  });
+
+  modelSelect.addEventListener("change", () => {
+    setStatus(statusEl, "unloaded");
+    progressEl.textContent = "模型已切换，点击加载后开始本地推理。";
+    loadButton.disabled = false;
+    loadButton.textContent = "加载本地大模型";
+    engine = undefined;
+    loadedModelId = "";
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -266,14 +361,41 @@ function initChat() {
     input.value = "";
     setBusy(input, sendButton, true);
 
-    const pending = appendMessage(log, "agent", "正在根据前文生成回复...", undefined, "pending");
-    const reply = await createReply(message, conversation.slice(0, -1));
-    pending.remove();
-    appendMessage(log, "agent", reply.text, reply.searchUrl);
-    conversation.push({ role: "assistant", content: reply.text });
-    setStatus(statusEl, reply.mode);
-    setBusy(input, sendButton, false);
-    input.focus();
+    const pending = appendMessage(log, "agent", "正在准备用本地大模型生成回复...", undefined, "pending");
+
+    try {
+      if (!engine) {
+        await ensureModelLoaded({ modelSelect, loadButton, progressEl, statusEl });
+      }
+
+      const reply = await createReply(message, conversation.slice(0, -1), {
+        onToken: (partial) => {
+          pending.querySelector(".bubble").textContent = partial;
+        }
+      });
+      pending.classList.remove("pending");
+      pending.querySelector(".bubble").textContent = reply.text;
+      conversation.push({ role: "assistant", content: reply.text });
+      setStatus(statusEl, reply.mode);
+    } catch (error) {
+      const fallback = createLocalReply(message, conversation.slice(0, -1));
+      pending.classList.remove("pending");
+      pending.querySelector(".bubble").textContent = `${fallback.text}\n\n（本地大模型未能启动：${error.message}）`;
+      if (fallback.searchUrl) {
+        const link = document.createElement("a");
+        link.className = "search-link";
+        link.href = fallback.searchUrl;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = "打开 Search";
+        pending.append(link);
+      }
+      conversation.push({ role: "assistant", content: fallback.text });
+      setStatus(statusEl, "fallback");
+    } finally {
+      setBusy(input, sendButton, false);
+      input.focus();
+    }
   });
 
   input.addEventListener("keydown", (event) => {

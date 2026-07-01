@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>暖心赞美鼓励机器人</title>
   <link rel="stylesheet" href="./styles.css">
-  <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
   <main class="app-shell">
@@ -15,8 +14,19 @@
           <p class="eyebrow">AI智能体技术及其应用1</p>
           <h1>暖心赞美鼓励机器人</h1>
         </div>
-        <span id="modelStatus" class="status">AI 对话</span>
+        <span id="modelStatus" class="status fallback">未加载模型</span>
       </header>
+
+      <div class="model-bar">
+        <label for="modelSelect">本地模型</label>
+        <select id="modelSelect">
+          <option value="Qwen2-1.5B-Instruct-q4f16_1-MLC">Qwen2 1.5B Instruct</option>
+          <option value="Qwen2-0.5B-Instruct-q4f16_1-MLC">Qwen2 0.5B 快速版</option>
+          <option value="Qwen2-7B-Instruct-q4f16_1-MLC">Qwen2 7B 强化版</option>
+        </select>
+        <button id="loadModelButton" type="button">加载本地大模型</button>
+        <span id="loadProgress">首次加载会下载模型，之后浏览器缓存。</span>
+      </div>
 
       <div id="chatLog" class="chat-log" aria-live="polite"></div>
 
@@ -37,7 +47,7 @@
       <dl>
         <div>
           <dt>类型</dt>
-          <dd>基于提示词的智能体</dd>
+          <dd>浏览器本地大模型智能体</dd>
         </div>
         <div>
           <dt>角色</dt>
@@ -46,6 +56,10 @@
         <div>
           <dt>资料</dt>
           <dd>实践1提示词.txt</dd>
+        </div>
+        <div>
+          <dt>运行方式</dt>
+          <dd>WebLLM + WebGPU 本地推理</dd>
         </div>
       </dl>
 
