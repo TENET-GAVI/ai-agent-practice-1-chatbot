@@ -94,6 +94,12 @@ h2 {
   font-size: 13px;
 }
 
+.status.fallback {
+  color: #8a4b09;
+  border-color: rgba(210, 132, 24, 0.34);
+  background: #fff7e8;
+}
+
 .chat-log {
   display: flex;
   flex-direction: column;
@@ -137,6 +143,11 @@ h2 {
 .message.agent .bubble {
   background: var(--agent);
   border-color: rgba(15, 118, 110, 0.22);
+}
+
+.message.pending .bubble {
+  color: var(--muted);
+  background: #f8faf9;
 }
 
 .search-link {
@@ -195,6 +206,12 @@ summary:focus-visible,
 .composer button:hover,
 .search-link:hover {
   background: var(--accent-strong);
+}
+
+.composer button:disabled,
+.composer button:disabled:hover {
+  cursor: wait;
+  background: #7d918e;
 }
 
 .quick-prompts {

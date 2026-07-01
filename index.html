@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>暖心赞美鼓励机器人</title>
   <link rel="stylesheet" href="./styles.css">
+  <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
   <main class="app-shell">
@@ -14,14 +15,14 @@
           <p class="eyebrow">AI智能体技术及其应用1</p>
           <h1>暖心赞美鼓励机器人</h1>
         </div>
-        <span class="status">可对话</span>
+        <span id="modelStatus" class="status">AI 对话</span>
       </header>
 
       <div id="chatLog" class="chat-log" aria-live="polite"></div>
 
       <form id="chatForm" class="composer">
         <textarea id="userInput" name="message" rows="2" placeholder="输入一句话，和智能体对话" autocomplete="off"></textarea>
-        <button type="submit" aria-label="发送消息">发送</button>
+        <button id="sendButton" type="submit" aria-label="发送消息">发送</button>
       </form>
 
       <div class="quick-prompts" aria-label="快捷输入">
